@@ -12,6 +12,12 @@ Item {
     // Tells the parent Floating.qml to use a "1 Full Block" background grid
     property int requestedLayoutTemplate: 2
 
+    // ADDED: Track whether this tab is currently the active one to isolate inputs
+    property bool isActiveTab: typeof isCurrentTarget !== "undefined" ? isCurrentTarget : true
+
+    // FIXED: Added missing iconFont property to prevent 'undefined to QString' warnings
+    property string iconFont: "Font Awesome 6 Free Solid" 
+
     // =========================================================
     // --- SCALING & DIMENSIONS
     // =========================================================
@@ -57,12 +63,14 @@ Item {
     property real penSizeRatio: 0.3
     property real actualPenSize: s(2) + (penSizeRatio * s(30)) // Ranges from 2 to 32
 
-    property var baseTextColor: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.text : "#cdd6f4"
-    property var solidBgColor: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.mantle : "#181825"
+    // FIXED: Strict color resolution to prevent undefined QString warnings
+    property color baseTextColor: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.text) ? mochaColors.text : "#cdd6f4"
+    property color solidBgColor: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.mantle) ? mochaColors.mantle : "#181825"
+    property color themeBaseColor: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? mochaColors.base : "#1e1e2e"
     
     // Universal Panel Styling
-    property color panelBgColor: typeof mochaColors !== "undefined" && mochaColors ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.85) : Qt.rgba(root.solidBgColor.r, root.solidBgColor.g, root.solidBgColor.b, 0.85)
-    property color panelBorderColor: typeof mochaColors !== "undefined" && mochaColors ? Qt.rgba(mochaColors.text.r, mochaColors.text.g, mochaColors.text.b, 0.08) : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.15)
+    property color panelBgColor: Qt.rgba(themeBaseColor.r, themeBaseColor.g, themeBaseColor.b, 0.85)
+    property color panelBorderColor: Qt.rgba(baseTextColor.r, baseTextColor.g, baseTextColor.b, 0.15)
 
 
     // Zoom limits and World Size
@@ -111,8 +119,9 @@ Item {
         }
     }
 
-    Shortcut { enabled: root.visible; sequence: "Ctrl+Z"; onActivated: root.undo() }
-    Shortcut { enabled: root.visible; sequence: "Ctrl+Shift+Z"; onActivated: root.redo() }
+    // FIXED: Isolated shortcuts
+    Shortcut { enabled: root.visible && root.isActiveTab; sequence: "Ctrl+Z"; onActivated: root.undo() }
+    Shortcut { enabled: root.visible && root.isActiveTab; sequence: "Ctrl+Shift+Z"; onActivated: root.redo() }
 
     // =========================================================
     // --- MASTER ORIENTATION CONTAINER
@@ -147,6 +156,7 @@ Item {
 
             PinchHandler {
                 target: zoomContainer
+                enabled: root.isActiveTab // FIXED: Isolated Input
                 minimumScale: root.minZoom
                 maximumScale: root.maxZoom
             }
@@ -167,7 +177,7 @@ Item {
 
                 DragHandler {
                     target: zoomContainer
-                    enabled: root.currentTool === "mouse"
+                    enabled: root.currentTool === "mouse" && root.isActiveTab // FIXED: Isolated Input
                     acceptedButtons: Qt.LeftButton
                 }
 
@@ -188,7 +198,7 @@ Item {
                     anchors.fill: parent
                     z: 1
                     
-		    renderTarget: Canvas.FramebufferObject
+            renderTarget: Canvas.FramebufferObject
                     
                     property real lastX: -1
                     property real lastY: -1
@@ -321,6 +331,7 @@ Item {
 
                     MouseArea {
                         anchors.fill: parent
+                        enabled: root.isActiveTab // FIXED: Isolated Input
                         acceptedButtons: root.currentTool === "mouse" ? Qt.NoButton : Qt.LeftButton
                         
                         onWheel: (wheel) => {
@@ -454,7 +465,7 @@ Item {
                         width: s(32); height: s(32)
                         Rectangle {
                             anchors.fill: parent; radius: s(14); z:-1
-                            color: zoomMinusMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                            color: zoomMinusMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         }
                         Text {
                             anchors.centerIn: parent; text: "\uF068"; font.family: root.iconFont; font.pixelSize: s(14); color: root.baseTextColor
@@ -469,7 +480,7 @@ Item {
                         width: s(48); height: s(32)
                         Rectangle {
                             anchors.fill: parent; radius: s(14); z:-1
-                            color: zoomResetMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                            color: zoomResetMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         }
                         Text {
                             anchors.centerIn: parent; text: Math.round(zoomContainer.scale * 100) + "%"; font.pixelSize: s(12); color: root.baseTextColor; font.bold: true
@@ -488,7 +499,7 @@ Item {
                         width: s(32); height: s(32)
                         Rectangle {
                             anchors.fill: parent; radius: s(14); z:-1
-                            color: zoomPlusMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                            color: zoomPlusMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         }
                         Text {
                             anchors.centerIn: parent; text: "\uF067"; font.family: root.iconFont; font.pixelSize: s(14); color: root.baseTextColor
@@ -512,7 +523,7 @@ Item {
                 
                 Rectangle {
                     anchors.centerIn: parent; width: s(32); height: s(32); radius: s(14); z:-1
-                    color: copyMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                    color: copyMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                 }
 
                 Text {
@@ -547,7 +558,7 @@ Item {
             width: s(260)
             height: s(64)
             radius: s(14)
-            color: typeof mochaColors !== "undefined" && mochaColors ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
+            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
             border.width: 1
             border.color: root.panelBorderColor
             
@@ -576,19 +587,19 @@ Item {
                     Layout.fillWidth: true
                     height: s(6)
                     radius: s(3)
-                    color: typeof mochaColors !== "undefined" && mochaColors ? Qt.rgba(mochaColors.text.r, mochaColors.text.g, mochaColors.text.b, 0.1) : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)
+                    color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.text) ? Qt.rgba(mochaColors.text.r, mochaColors.text.g, mochaColors.text.b, 0.1) : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)
                     
                     Rectangle {
                         width: parent.width * root.penSizeRatio
                         height: parent.height
                         radius: parent.radius
-                        color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.mauve : "#cba6f7"
+                        color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.mauve) ? mochaColors.mauve : "#cba6f7"
                     }
 
                     Rectangle {
                         width: s(18); height: s(18)
                         radius: width/2
-                        color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.mauve : "#cba6f7"
+                        color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.mauve) ? mochaColors.mauve : "#cba6f7"
                         x: (parent.width * root.penSizeRatio) - (width/2)
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -632,7 +643,7 @@ Item {
             width: s(320)
             height: s(340)
             radius: s(14)
-            color: typeof mochaColors !== "undefined" && mochaColors ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
+            color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.base) ? Qt.rgba(mochaColors.base.r, mochaColors.base.g, mochaColors.base.b, 0.98) : root.solidBgColor
             border.width: 1
             border.color: root.panelBorderColor
             
@@ -742,6 +753,7 @@ Item {
                 }
 
                 // Quick Swatches
+                // FIXED: Robust null checks for mochaColors properties
                 Grid {
                     columns: 8
                     spacing: s(12)
@@ -749,14 +761,14 @@ Item {
 
                     Repeater {
                         model: [
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.red : "#f38ba8",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.peach : "#fab387",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.yellow : "#f9e2af",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.green : "#a6e3a1",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.sapphire : "#74c7ec",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.blue : "#89b4fa",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.mauve : "#cba6f7",
-                            typeof mochaColors !== "undefined" && mochaColors ? mochaColors.text : "#cdd6f4"
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.red) ? mochaColors.red : "#f38ba8",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.peach) ? mochaColors.peach : "#fab387",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.yellow) ? mochaColors.yellow : "#f9e2af",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.green) ? mochaColors.green : "#a6e3a1",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.sapphire) ? mochaColors.sapphire : "#74c7ec",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.blue) ? mochaColors.blue : "#89b4fa",
+                            (typeof mochaColors !== "undefined" && mochaColors && mochaColors.mauve) ? mochaColors.mauve : "#cba6f7",
+                            root.baseTextColor
                         ]
                         
                         Rectangle {
@@ -795,9 +807,9 @@ Item {
                     Rectangle {
                         width: s(120)
                         height: s(28)
-                        color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.05)
+                        color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.05)
                         border.width: 1
-                        border.color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface1 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)
+                        border.color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface1) ? mochaColors.surface1 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)
                         radius: s(6)
                         
                         TextInput {
@@ -849,7 +861,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: s(14)
-                        color: undoMouse.containsMouse && root.historyStep >= 0 ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                        color: undoMouse.containsMouse && root.historyStep >= 0 ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         Behavior on color { ColorAnimation { duration: 150 } }
                         z: -1
                     }
@@ -881,7 +893,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: s(14)
-                        color: redoMouse.containsMouse && root.historyStep < root.actionHistory.length - 1 ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                        color: redoMouse.containsMouse && root.historyStep < root.actionHistory.length - 1 ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         Behavior on color { ColorAnimation { duration: 150 } }
                         z: -1
                     }
@@ -923,7 +935,7 @@ Item {
                         y: 0
                         height: s(32)
                         radius: s(14)
-                        color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface1 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.15)
+                        color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface1) ? mochaColors.surface1 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.15)
                         z: 0
 
                         property int prevIdx: 0
@@ -972,7 +984,7 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: s(14)
-                                    color: toolMouseArea.containsMouse && root.currentTool !== modelData.id ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.08)) : "transparent"
+                                    color: toolMouseArea.containsMouse && root.currentTool !== modelData.id ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.08)) : "transparent"
                                     Behavior on color { ColorAnimation { duration: 150 } }
                                     z: -1
                                 }
@@ -987,7 +999,7 @@ Item {
                                     text: modelData.icon
                                     font.family: root.iconFont
                                     font.pixelSize: s(14)
-                                    color: root.currentTool === modelData.id ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.mauve : "#cba6f7") : root.baseTextColor
+                                    color: root.currentTool === modelData.id ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.mauve) ? mochaColors.mauve : "#cba6f7") : root.baseTextColor
                                     opacity: root.currentTool === modelData.id ? 1.0 : (toolMouseArea.containsMouse ? 0.8 : 0.5)
                                     Behavior on color { ColorAnimation { duration: 250 } }
                                 }
@@ -1032,7 +1044,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: s(14)
-                        color: colorIndicatorMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                        color: colorIndicatorMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         Behavior on color { ColorAnimation { duration: 150 } }
                         z: -1
                     }
@@ -1079,7 +1091,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: s(14)
-                        color: clearMouse.containsMouse ? (typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
+                        color: clearMouse.containsMouse ? ((typeof mochaColors !== "undefined" && mochaColors && mochaColors.surface0) ? mochaColors.surface0 : Qt.rgba(root.baseTextColor.r, root.baseTextColor.g, root.baseTextColor.b, 0.1)) : "transparent"
                         Behavior on color { ColorAnimation { duration: 150 } }
                         z: -1
                     }
@@ -1090,7 +1102,7 @@ Item {
                         verticalAlignment: Text.AlignVCenter
                         text: "\uF1F8" // fa-trash
                         font.family: root.iconFont
-                        color: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.red : "#f38ba8"
+                        color: (typeof mochaColors !== "undefined" && mochaColors && mochaColors.red) ? mochaColors.red : "#f38ba8"
                         font.pixelSize: s(14)
                         opacity: clearMouse.pressed ? 0.5 : (clearMouse.containsMouse ? 1.0 : 0.7)
                     }

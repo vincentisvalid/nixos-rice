@@ -8,9 +8,6 @@ import "../" // Resolves the SysData singleton from the parent directory
 Item {
     id: root
 
-    // =========================================================
-    // --- SAFE CONTEXT RESOLUTION (Prevents Shadowing & Crashes)
-    // =========================================================
     // By NOT declaring these as local properties, we allow QML to naturally 
     // inherit them from the parent Loader in Floating.qml
     property string safeActiveEdge: typeof activeEdge !== "undefined" ? activeEdge : "left"
@@ -19,21 +16,18 @@ Item {
         return typeof scaleFunc === "function" ? scaleFunc(val) : val;
     }
 
-    // =========================================================
-    // --- 5-CELL GRID TEMPLATE
-    // =========================================================
     property var requestedLayoutTemplate: [
-        { x: 0.0, y: 0.0, w: 0.333, h: 0.5 },  // Top Left (CPU)
-        { x: 0.333, y: 0.0, w: 0.334, h: 0.5 },// Top Mid (RAM)
-        { x: 0.667, y: 0.0, w: 0.333, h: 0.5 },// Top Right (Temp)
-        { x: 0.0, y: 0.5, w: 0.5, h: 0.5 },    // Bottom Left (Disk)
-        { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }     // Bottom Right (Network)
+        { x: 0.0, y: 0.0, w: 0.333, h: 0.5 },
+        { x: 0.333, y: 0.0, w: 0.334, h: 0.5 },
+        { x: 0.667, y: 0.0, w: 0.333, h: 0.5 },
+        { x: 0.0, y: 0.5, w: 0.5, h: 0.5 },
+        { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
     ]
 
     property real baseW: s(360)
-    property real baseL: s(360)
+    property real baseL: s(250)
 
-    property real preferredWidth: root.safeActiveEdge === "bottom" ? baseL : baseW
+    property real preferredWidth: root.safeActiveEdge === "bottom" ? baseL + 80 : baseW
     property real preferredExtraLength: root.safeActiveEdge === "bottom" ? baseW : baseL
 
     property real counterRotation: {
@@ -49,9 +43,7 @@ Item {
     function cellW(mx, mw) { return (mw * orientedRoot.width) - ((mx > 0 ? sp / 2 : 0) + ((mx + mw) < 0.99 ? sp / 2 : 0)); }
     function cellH(my, mh) { return (mh * orientedRoot.height) - ((my > 0 ? sp / 2 : 0) + ((my + mh) < 0.99 ? sp / 2 : 0)); }
 
-    // =========================================================
-    // --- UNIFIED MATUGEN THEMING (Strict Type Binding)
-    // =========================================================
+    // Unified Matugen Theming (Strict Type Binding)
     property color cBase: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.base : "#1e1e2e"
     property color cCrust: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.crust : "#11111b"
     property color cSurface0: typeof mochaColors !== "undefined" && mochaColors ? mochaColors.surface0 : "#313244"
@@ -73,7 +65,6 @@ Item {
 
     function alpha(color, a) { return Qt.rgba(color.r, color.g, color.b, a); }
 
-    // Global Liquid Wave Animator
     property bool widgetVisible: parent !== null && parent.visible !== undefined ? parent.visible : true
     
     property real globalWavePhase: 0.0
@@ -81,38 +72,47 @@ Item {
         from: 0; to: Math.PI * 2; duration: 1800; loops: Animation.Infinite; running: root.widgetVisible
     }
 
-    // =========================================================
-    // --- LIFECYCLE MANAGEMENT
-    // =========================================================
     Component.onCompleted: SysData.subscribe()
     Component.onDestruction: SysData.unsubscribe()
 
-    // =========================================================
-    // --- DATA STATE (Bound to SysData Singleton)
-    // =========================================================
-    property real cpuUsage: SysData.cpu / 100.0
-    property real tempC: SysData.temp
-    
-    property real ramUsage: SysData.ramPercent / 100.0
-    property real ramUsedGb: SysData.ramGb
-    
-    property string rxSpeedStr: root.formatBytes(SysData.netRx)
-    property string txSpeedStr: root.formatBytes(SysData.netTx)
+    // --- ANIMATED DATA STATE BINDINGS ---
+    // Smooths out raw SysData to drive both the visual wave and the dynamic text counters in constant 800ms time
+    property real rawCpu: isNaN(SysData.cpu) ? 0.0 : SysData.cpu / 100.0
+    property real cpuUsage: rawCpu
+    Behavior on cpuUsage { NumberAnimation { duration: 800; easing.type: Easing.OutQuint } }
+
+    property real rawTemp: isNaN(SysData.temp) ? 0.0 : SysData.temp
+    property real tempC: rawTemp
+    Behavior on tempC { NumberAnimation { duration: 800; easing.type: Easing.OutQuint } }
+
+    property real rawRam: isNaN(SysData.ramPercent) ? 0.0 : SysData.ramPercent / 100.0
+    property real ramUsage: rawRam
+    Behavior on ramUsage { NumberAnimation { duration: 800; easing.type: Easing.OutQuint } }
+
+    property real rawRamGb: isNaN(SysData.ramGb) ? 0.0 : SysData.ramGb
+    property real ramUsedGb: rawRamGb
+    Behavior on ramUsedGb { NumberAnimation { duration: 800; easing.type: Easing.OutQuint } }
+
+    // Network values snap instantly (no Behavior) because large byte jumps look erratic when interpolated
+    property real netRx: isNaN(SysData.netRx) ? 0 : SysData.netRx
+    property real netTx: isNaN(SysData.netTx) ? 0 : SysData.netTx
+
+    property string rxSpeedStr: root.formatBytes(netRx)
+    property string txSpeedStr: root.formatBytes(netTx)
 
     property real diskUsagePercent: 0.0
+    Behavior on diskUsagePercent { NumberAnimation { duration: 800; easing.type: Easing.OutQuint } }
+    
     property string diskUsageText: "..."
     property var diskFolders: []
 
     function formatBytes(bytes) {
-        if (bytes === 0 || isNaN(bytes)) return "0 B/s";
+        if (bytes <= 0 || isNaN(bytes)) return "0 B/s";
         let k = 1024, sizes = ["B/s", "KB/s", "MB/s", "GB/s"];
         let i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
     }
 
-    // =========================================================
-    // --- NATIVE SYSTEM POLLING (Disk Only)
-    // =========================================================
     Timer {
         id: diskTimer
         interval: 60000
@@ -167,9 +167,6 @@ Item {
         }
     }
 
-    // =========================================================
-    // --- REUSABLE INLINE COMPONENTS
-    // =========================================================
     component LiquidSquare: Item {
         id: ls
         property real value: 0.0 
@@ -178,11 +175,10 @@ Item {
         property string icon: ""
         property string title: ""
         property string valueText: ""
-        property string subText: "" // Handles the secondary stats (like disk GB)
+        property string subText: ""
         
         default property alias childItems: customContent.data
 
-        // Wave physics
         property real fillRatio: Math.max(0.0, Math.min(1.0, ls.value))
         property real fillY: height * (1.0 - ls.fillRatio)
         property real waveAmp: (ls.fillRatio < 0.99 && ls.fillRatio > 0.01) ? root.s(6) * Math.sin(ls.fillRatio * Math.PI) : 0
@@ -206,7 +202,6 @@ Item {
 
                 ctx.save();
                 
-                // Rounded clip path
                 var r = root.s(12);
                 ctx.beginPath();
                 ctx.moveTo(r, 0);
@@ -221,7 +216,6 @@ Item {
                 ctx.closePath();
                 ctx.clip();
 
-                // Draw Wave
                 ctx.beginPath();
                 ctx.moveTo(0, ls.fillY);
                 if (ls.waveAmp > 0) {
@@ -231,7 +225,7 @@ Item {
                     ctx.lineTo(width, height);
                     ctx.lineTo(0, height);
                 } else {
-                    ctx.lineTo(width, 0);
+                    ctx.lineTo(width, ls.fillY);
                     ctx.lineTo(width, height);
                     ctx.lineTo(0, height);
                 }
@@ -253,7 +247,6 @@ Item {
             }
         }
 
-        // 1. Unfilled Text (Base Layer)
         Item {
             anchors.fill: parent
             anchors.margins: root.s(12)
@@ -266,7 +259,7 @@ Item {
                 color: root.cSubtext0; text: ls.icon
             }
             Text {
-                anchors.verticalCenter: baseIcon.verticalCenter // Level alignment
+                anchors.verticalCenter: baseIcon.verticalCenter 
                 anchors.right: parent.right
                 font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(10)
                 color: root.cSubtext0; text: ls.title
@@ -274,7 +267,7 @@ Item {
             Text {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
-                anchors.bottomMargin: root.s(4) // Optical alignment next to the big percentage
+                anchors.bottomMargin: root.s(4) 
                 font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(12)
                 color: root.cSubtext0; text: ls.subText
             }
@@ -286,7 +279,6 @@ Item {
             }
         }
 
-        // 2. Filled Text (Clipped Layer for High Contrast)
         Item {
             id: waveClipBox
             anchors.bottom: parent.bottom
@@ -311,7 +303,7 @@ Item {
                     color: root.alpha(root.cCrust, 0.7); text: ls.icon
                 }
                 Text {
-                    anchors.verticalCenter: filledIcon.verticalCenter // Level alignment
+                    anchors.verticalCenter: filledIcon.verticalCenter 
                     anchors.right: parent.right
                     font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(10)
                     color: root.alpha(root.cCrust, 0.7); text: ls.title
@@ -319,7 +311,7 @@ Item {
                 Text {
                     anchors.bottom: parent.bottom
                     anchors.left: parent.left
-                    anchors.bottomMargin: root.s(4) // Optical alignment next to the big percentage
+                    anchors.bottomMargin: root.s(4) 
                     font.family: "JetBrains Mono"; font.bold: true; font.pixelSize: root.s(12)
                     color: root.cCrust; text: ls.subText
                 }
@@ -332,7 +324,6 @@ Item {
             }
         }
 
-        // Space for injected custom children (e.g., Folder bars, Network metrics)
         Item {
             id: customContent
             anchors.fill: parent
@@ -341,9 +332,6 @@ Item {
         }
     }
 
-    // =========================================================
-    // --- MASTER ORIENTATION CONTAINER (THE GRID)
-    // =========================================================
     Item {
         id: orientedRoot
         anchors.centerIn: parent
@@ -352,35 +340,32 @@ Item {
         rotation: root.counterRotation
         clip: false 
 
-        // 1. CPU
         LiquidSquare {
             x: root.cellX(0.0)
             y: root.cellY(0.0)
             width: root.cellW(0.0, 0.333)
             height: root.cellH(0.0, 0.5)
             
-            value: isNaN(root.cpuUsage) ? 0.0 : root.cpuUsage
-            colorFill: Qt.lighter(root.cMauve, 1.4) // Brightest Mauve
+            value: root.cpuUsage
+            colorFill: Qt.lighter(root.cMauve, 1.4) 
             icon: "\uF2DB" 
             title: "CPU"
-            valueText: Math.round(value * 100) + "%"
+            valueText: Math.round(root.cpuUsage * 100) + "%"
         }
 
-        // 2. RAM
         LiquidSquare {
             x: root.cellX(0.333)
             y: root.cellY(0.0)
             width: root.cellW(0.333, 0.334)
             height: root.cellH(0.0, 0.5)
             
-            value: isNaN(root.ramUsage) ? 0.0 : root.ramUsage
-            colorFill: Qt.lighter(root.cMauve, 1.2) // Mid-Bright Mauve
+            value: root.ramUsage
+            colorFill: Qt.lighter(root.cMauve, 1.2) 
             icon: "\uF538" 
             title: "RAM"
-            valueText: isNaN(root.ramUsedGb) ? "0G" : root.ramUsedGb.toFixed(1) + "G"
+            valueText: root.ramUsedGb.toFixed(1) + "G"
         }
 
-        // 3. TEMP
         LiquidSquare {
             x: root.cellX(0.667)
             y: root.cellY(0.0)
@@ -388,13 +373,12 @@ Item {
             height: root.cellH(0.0, 0.5)
             
             value: Math.max(0.0, Math.min(1.0, root.tempC / 100.0))
-            colorFill: root.cMauve // Base Mauve
+            colorFill: root.cMauve 
             icon: "\uF2C9"
             title: "TEMP"
             valueText: Math.round(root.tempC) + "°"
         }
 
-        // 4. DISK
         LiquidSquare {
             x: root.cellX(0.0)
             y: root.cellY(0.5)
@@ -402,22 +386,21 @@ Item {
             height: root.cellH(0.5, 0.5)
 
             value: root.diskUsagePercent
-            colorFill: Qt.darker(root.cMauve, 1.2) // Darker Mauve
+            colorFill: Qt.darker(root.cMauve, 1.2) 
             icon: "\uF0A0"
             title: "DISK"
             subText: root.diskUsageText
             valueText: Math.round(root.diskUsagePercent * 100) + "%"
         }
 
-        // 5. NETWORK
         LiquidSquare {
             x: root.cellX(0.5)
             y: root.cellY(0.5)
             width: root.cellW(0.5, 0.5)
             height: root.cellH(0.5, 0.5)
             
-            value: 0.12 // Base aesthetic 12% ripple representing idle connection
-            colorFill: Qt.darker(root.cMauve, 1.4) // Darkest Mauve
+            value: 0.12 
+            colorFill: Qt.darker(root.cMauve, 1.4) 
             icon: "󰤨"
             title: "NET"
             valueText: ""
@@ -426,14 +409,12 @@ Item {
                 anchors.centerIn: parent
                 spacing: root.s(15)
 
-                // Download
                 RowLayout {
                     spacing: root.s(12)
                     Text { text: "\uF063"; font.family: root.iconFont; font.pixelSize: root.s(16); color: root.cGreen }
                     Text { text: root.rxSpeedStr; color: root.textPrimary; font.family: "JetBrains Mono"; font.pixelSize: root.s(16); font.bold: true }
                 }
 
-                // Upload
                 RowLayout {
                     spacing: root.s(12)
                     Text { text: "\uF062"; font.family: root.iconFont; font.pixelSize: root.s(16); color: root.cPeach }

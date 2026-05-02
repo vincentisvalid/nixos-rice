@@ -12,9 +12,9 @@ Variants {
         PanelWindow {
             id: floatingWidget
             required property var modelData
-	    screen: modelData
+            screen: modelData
 
-	    Connections {
+            Connections {
                 target: Quickshell
 
                 function onReloadCompleted() {
@@ -24,7 +24,7 @@ Variants {
                 function onReloadFailed(errorString) {
                     Quickshell.inhibitReloadPopup()
                 }
-    	    }
+            }
 
             WlrLayershell.namespace: "qs-floating-overlay"
             WlrLayershell.layer: WlrLayer.Overlay
@@ -72,8 +72,8 @@ Variants {
             // =========================================================
             property var tabModules: [
                 "quickactions/DrawAction.qml",
-                "quickactions/SystemUsage.qml"
-                // Add more modules here, the widget will scale its height automatically!
+                "quickactions/SystemUsage.qml",
+                "quickactions/Todo.qml"
             ]
 
             property int tabCount: Math.max(1, tabModules.length)
@@ -97,6 +97,26 @@ Variants {
             }
 
             // =========================================================
+            // --- UNIVERSAL SHORTCUT ROUTER
+            // =========================================================
+            function childIntercepts(sequenceStr) {
+                // If not expanded, parent always keeps control
+                if (!isExpanded) return false; 
+
+                if (typeof moduleRepeater !== "undefined" && activeIndex >= 0 && activeIndex < moduleRepeater.count) {
+                    let loader = moduleRepeater.itemAt(activeIndex);
+                    
+                    if (loader && loader.status === Loader.Ready && loader.item) {
+                        // Check if the child has exposed a list of shortcuts it wants to steal
+                        if (loader.item.interceptedShortcuts !== undefined) {
+                            return loader.item.interceptedShortcuts.includes(sequenceStr);
+                        }
+                    }
+                }
+                return false; // Safe default: parent retains the shortcut
+            }
+
+            // =========================================================
             // --- KEYBOARD SHORTCUTS & ACTIVITY TRACKER
             // =========================================================
             function kickTimer() {
@@ -114,23 +134,23 @@ Variants {
                 }
             }
 
-            Shortcut { enabled: floatingWidget.isSidebarVisible; sequence: "Tab"; onActivated: { floatingWidget.activeIndex = (floatingWidget.activeIndex + 1) % floatingWidget.tabCount; floatingWidget.kickTimer(); } }
-            Shortcut { enabled: floatingWidget.isSidebarVisible; sequence: "Shift+Tab"; onActivated: { floatingWidget.activeIndex = (floatingWidget.activeIndex + (floatingWidget.tabCount - 1)) % floatingWidget.tabCount; floatingWidget.kickTimer(); } }
-            Shortcut { enabled: floatingWidget.isSidebarVisible; sequence: "Return"; onActivated: { floatingWidget.isExpanded = !floatingWidget.isExpanded; floatingWidget.kickTimer(); } }
-            Shortcut { enabled: floatingWidget.isSidebarVisible; sequence: "Enter"; onActivated: { floatingWidget.isExpanded = !floatingWidget.isExpanded; floatingWidget.kickTimer(); } }
+            Shortcut { enabled: floatingWidget.isSidebarVisible && !floatingWidget.childIntercepts("Tab"); sequence: "Tab"; onActivated: { floatingWidget.activeIndex = (floatingWidget.activeIndex + 1) % floatingWidget.tabCount; floatingWidget.kickTimer(); } }
+            Shortcut { enabled: floatingWidget.isSidebarVisible && !floatingWidget.childIntercepts("Shift+Tab"); sequence: "Shift+Tab"; onActivated: { floatingWidget.activeIndex = (floatingWidget.activeIndex + (floatingWidget.tabCount - 1)) % floatingWidget.tabCount; floatingWidget.kickTimer(); } }
+            Shortcut { enabled: floatingWidget.isSidebarVisible && !floatingWidget.childIntercepts("Return"); sequence: "Return"; onActivated: { floatingWidget.isExpanded = !floatingWidget.isExpanded; floatingWidget.kickTimer(); } }
+            Shortcut { enabled: floatingWidget.isSidebarVisible && !floatingWidget.childIntercepts("Enter"); sequence: "Enter"; onActivated: { floatingWidget.isExpanded = !floatingWidget.isExpanded; floatingWidget.kickTimer(); } }
             
             Shortcut { 
-                enabled: floatingWidget.isSidebarVisible && floatingWidget.activeEdge === "bottom"
+                enabled: floatingWidget.isSidebarVisible && floatingWidget.activeEdge === "bottom" && !floatingWidget.childIntercepts("Left")
                 sequence: "Left"
                 onActivated: { floatingWidget.activeIndex = Math.max(0, floatingWidget.activeIndex - 1); floatingWidget.kickTimer(); } 
             }
             Shortcut { 
-                enabled: floatingWidget.isSidebarVisible && floatingWidget.activeEdge === "bottom"
+                enabled: floatingWidget.isSidebarVisible && floatingWidget.activeEdge === "bottom" && !floatingWidget.childIntercepts("Right")
                 sequence: "Right"
                 onActivated: { floatingWidget.activeIndex = Math.min(floatingWidget.tabCount - 1, floatingWidget.activeIndex + 1); floatingWidget.kickTimer(); } 
             }
             Shortcut { 
-                enabled: floatingWidget.isSidebarVisible && (floatingWidget.activeEdge === "left" || floatingWidget.activeEdge === "right")
+                enabled: floatingWidget.isSidebarVisible && (floatingWidget.activeEdge === "left" || floatingWidget.activeEdge === "right") && !floatingWidget.childIntercepts("Up")
                 sequence: "Up"
                 onActivated: { 
                     let step = floatingWidget.activeEdge === "right" ? 1 : -1;
@@ -139,7 +159,7 @@ Variants {
                 } 
             }
             Shortcut { 
-                enabled: floatingWidget.isSidebarVisible && (floatingWidget.activeEdge === "left" || floatingWidget.activeEdge === "right")
+                enabled: floatingWidget.isSidebarVisible && (floatingWidget.activeEdge === "left" || floatingWidget.activeEdge === "right") && !floatingWidget.childIntercepts("Down")
                 sequence: "Down"
                 onActivated: { 
                     let step = floatingWidget.activeEdge === "right" ? -1 : 1;
@@ -149,7 +169,7 @@ Variants {
             }
 
             Shortcut { 
-                enabled: floatingWidget.isSidebarVisible
+                enabled: floatingWidget.isSidebarVisible && !floatingWidget.childIntercepts("Escape")
                 sequence: "Escape"
                 onActivated: {
                     if (floatingWidget.isExpanded) {
@@ -185,7 +205,7 @@ Variants {
             // =========================================================
             property int activeIndex: 0 
             property bool isExpanded: false 
-            
+
             property var currentLayoutTemplate: [{x: 0, y: 0, w: 1, h: 1}]
 
             function evaluateDrag(gpStartX, gpStartY, gpMouseX, gpMouseY) {
