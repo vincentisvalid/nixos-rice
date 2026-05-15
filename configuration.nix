@@ -21,7 +21,8 @@
     inotify-tools
     lavat
     file
-    pipes 
+    pipes
+    glaxnimate
     clock-rs
     cbonsai
     git
@@ -33,6 +34,7 @@
     gpu-screen-recorder
     neovim 
     fzf
+    inkscape
     direnv
     zbar
     python311
