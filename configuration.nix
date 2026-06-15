@@ -136,8 +136,13 @@
   # Desktop environment, window managers and theme
   services.xserver.enable = true;
 
-  # Enable the GNOME Desktop Environment.
-  services.displayManager.gdm.enable = true;
+  # Login manager: SDDM (Wayland). Replaces GDM — fits the Hyprland/Qt rice better.
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
+  # GNOME desktop is still installed (the rice relies on nautilus, gsettings,
+  # gnome-tweaks, etc.); only the display manager changed.
   services.desktopManager.gnome.enable = true;
   
   # Hyprland
@@ -211,6 +216,10 @@
     pulse.enable = true;
   };
   services.blueman.enable = true;
+  # Enable the Bluetooth radio itself (blueman is just the applet). Without this
+  # the rice's network/Bluetooth panel can't see the adapter.
+  hardware.bluetooth.enable = true;
+  hardware.bluetooth.powerOnBoot = true;
 
   # Enable CUPS to print documents.
   services.printing.enable = true;

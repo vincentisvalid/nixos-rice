@@ -127,7 +127,9 @@ export function buildSteps(cfg) {
     run: (onData) =>
       bash(
         `
-        WALLDIR="${MNT}/home/${cfg.username}/Pictures/wallpapers"
+        # NOTE: capital "Wallpapers" — this is the path the rice's wallpaper
+        # picker (qs_manager.sh) defaults to ($HOME/Pictures/Wallpapers).
+        WALLDIR="${MNT}/home/${cfg.username}/Pictures/Wallpapers"
         mkdir -p "$(dirname "$WALLDIR")"
         rm -rf "$WALLDIR"
         git clone --depth 1 "${cfg.wallpapersUrl}" "$WALLDIR"
