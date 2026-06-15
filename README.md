@@ -54,12 +54,17 @@ built from source via flake inputs (`flake.lock` pins them — no manual hashes)
    the disk *before* it builds, so catch any eval error while the disk is still intact:
 
    ```bash
-   nix eval --extra-experimental-features 'nix-command flakes' \
+   nix eval --refresh --extra-experimental-features 'nix-command flakes' \
      github:vincentisvalid/nixos-rice#nixosConfigurations.nixos.config.system.build.toplevel.drvPath
    ```
 
+   (`--refresh` makes nix re-fetch the latest commit instead of a cached copy of
+   the branch — important after any fix.)
+
    - Prints a `/nix/store/….drv` path → the base config **evaluates cleanly**; proceed.
    - Throws an error → fix it (or open an issue) **before** wiping anything.
+   - Harmless purple `evaluation warning:` lines (neovim providers, `home.stateVersion`)
+     don't block — only a red `error:` / `Failed assertions:` does.
 
    This validates the base system (packages, options, GPU module, Firefox gating). The
    optional from-source/CUDA apps (`starpsx`, `boo`, GPU Ollama) are only built later by
