@@ -2,17 +2,17 @@
 # your system. Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, username, host, ... }:
 
 {
   # Imports
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      <home-manager/nixos>
+      # GPU drivers, selected via host.nix (nvidia-open / nvidia / amd / intel).
+      (./modules/gpu + "/${host.gpu}.nix")
     ];
-
-  home-manager.backupFileExtension = "backup";
+  # NOTE: home-manager is wired up as a flake module in flake.nix, not here.
 
   # System packages
   environment.systemPackages = with pkgs; [
@@ -39,7 +39,9 @@
     zbar
     python311
     ffmpeg
-    python314
+    # NOTE: `python314` from the original config is not packaged in nixpkgs as of
+    # this writing. python311 above covers the rice's scripts; re-add a specific
+    # interpreter here (e.g. python312) if you need a newer one.
     (wrapFirefox (pkgs.firefox-unwrapped.override { pipewireSupport = true; }) {})
     telegram-desktop
     pkgs.onlyoffice-desktopeditors
@@ -71,17 +73,20 @@
     bottles
     qbittorrent
     power-profiles-daemon
-    jdk8
+    # NOTE: `jdk8` is marked insecure in nixpkgs and will fail to build unless you
+    # allow it. If you need Java 8, uncomment it AND add to nix settings below:
+    #   nixpkgs.config.permittedInsecurePackages = [ "openjdk-8...." ];
+    # jdk8
     steam-run
   ];
 
   environment.pathsToLink = [ "/share/gsettings-schemas" ];
 
   # User accounts and security
-  users.users.ilyamiro = {
+  users.users.${username} = {
     isNormalUser = true;
-    description = "ilyamiro";
-    extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd"]; 
+    description = username;
+    extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd"];
     packages = with pkgs; [
     #  thunderbird
     ];
@@ -94,7 +99,7 @@
 
   security.sudo.extraRules = [
     {
-      users = [ "ilyamiro" ];
+      users = [ username ];
       commands = [
         {
           command = "ALL";
@@ -126,13 +131,7 @@
   };
   programs.gamemode.enable = true;
 
-  # Home manager
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true; 
-  
-  home-manager.users.ilyamiro = {
-    imports = [ ./home.nix ];
-  };
+  # Home manager is configured in flake.nix (home-manager.users.${username}).
 
   # Desktop environment, window managers and theme
   services.xserver.enable = true;
@@ -178,17 +177,17 @@
   # environment.variables.XDG_DATA_DIRS = lib.mkForce "/home/ilyamiro/.nix-profile/share:/run/current-system/sw/share";
 
   # Networking and time
-  networking.hostName = "ilyamiro"; 
+  networking.hostName = host.hostname;
   
   networking.networkmanager = {
     enable = true;
     wifi.powersave = false; 
   };
    # Set your time zone.
-  time.timeZone = "Europe/Copenhagen";
+  time.timeZone = host.timezone;
 
   # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
+  i18n.defaultLocale = host.locale;
 
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_US.UTF-8";
@@ -241,8 +240,8 @@
           pname = "plymouth-theme-simple";
           version = "1.0";
           
-          # CHANGE THIS to the actual path of your custom theme folder
-          src = /etc/nixos/config/programs/plymouth/simple; 
+          # Path is relative to this flake, so it works regardless of checkout location.
+          src = ./config/programs/plymouth/simple;
 
           installPhase = ''
             mkdir -p $out/share/plymouth/themes/simple
@@ -266,9 +265,9 @@
       "rd.systemd.show_status=false"
       "rd.udev.log_level=3"
       "udev.log_priority=3"
-      "amd_pstate=active" 
-      "tsc=reliable" 
-      "asus_wmi"
+      "tsc=reliable"
+      # Laptop/ASUS-specific params from the original config were removed
+      # (amd_pstate=active, asus_wmi). Re-add machine-specific params here.
     ];
     
   };
@@ -276,13 +275,20 @@
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
 	
-  # Bootloader and kernel
-  boot.loader.systemd-boot.enable = true;
+  # Bootloader and kernel — GRUB in UEFI mode.
+  boot.loader.grub = {
+    enable = true;
+    efiSupport = true;
+    device = "nodev";        # EFI install, not a BIOS disk target
+    useOSProber = true;      # detect other OSes for dual-boot menus
+  };
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.efi.efiSysMountPoint = "/boot";
 
   # Kernel Packages and Optimization
   boot.kernelPackages = pkgs.linuxPackages_latest;
-  hardware.cpu.amd.updateMicrocode = true;
+  # CPU microcode is enabled automatically by hardware-configuration.nix
+  # (nixos-generate-config detects AMD vs Intel on the target machine).
 
   boot.kernelModules = [ "tcp_bbr" ]; # FIX: Network Congestion Control (Helps with packet jitter)
   boot.kernel.sysctl = {
@@ -298,57 +304,11 @@
   powerManagement.cpuFreqGovernor = "performance";
 
   # ==========================================
-  # GPU / GRAPHICS CONFIGURATION (ADDED)
+  # GPU / GRAPHICS CONFIGURATION
   # ==========================================
+  # GPU drivers live in ./modules/gpu/<vendor>.nix and are imported at the top
+  # of this file based on host.gpu. The original inline NVIDIA/PRIME hybrid block
+  # (laptop-specific bus IDs) was removed in favour of those modules.
 
-  # Enable OpenGL/Vulkan (renamed to hardware.graphics in 24.11+)
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true; # Required for Steam/CS2
-  };
-
-  # Load NVIDIA Drivers
-  services.xserver.videoDrivers = [ "nvidia" ];
-
-  hardware.nvidia = {
-    # Modesetting is required.
-    modesetting.enable = true;
-
-    # Nvidia power management. Experimental, and can cause sleep/suspend to fail.
-    # Enable this if you have graphical corruption after suspend/wake.
-    powerManagement.enable = false;
-
-    # Fine-grained power management. Turns off GPU when not in use.
-    # Experimental and only works on modern Nvidia GPUs (Turing or newer).
-    powerManagement.finegrained = true;
-
-    # Use the NVidia open source kernel module (not to be confused with the
-    # independent third-party "nouveau" open source driver).
-    # Support is limited to the Turing and later architectures.
-    # We set to false here for maximum stability on the mobile 3050.
-    open = false;
-
-    # Enable the Nvidia settings menu,
-    # accessible via `nvidia-settings`.
-    nvidiaSettings = true;
-
-    # Select the stable driver version
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
-
-    # PRIME CONFIGURATION (Hybrid Graphics)
-    prime = {
-      offload = {
-        enable = true;
-        enableOffloadCmd = true;
-      };
-      
-      # Bus IDs derived from your lspci output
-      # NVIDIA: 01:00.0 -> PCI:1:0:0
-      # AMD: 04:00.0 -> PCI:4:0:0
-      nvidiaBusId = "PCI:1:0:0";
-      amdgpuBusId = "PCI:4:0:0";
-    };
-  };
-
-  system.stateVersion = "25.11"; 
+  system.stateVersion = "25.11";
 }

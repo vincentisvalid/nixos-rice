@@ -9,3 +9,12 @@ commit.txt
 config/programs/eww/hotfile-eww/*
 
 config/sessions/hyprland/scripts/quickshell/quickactions/Todo.qml
+
+# Nix
+result
+result-*
+
+# Installer
+installer/node_modules/
+installer/package-lock.json
+*.qcow2

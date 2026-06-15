@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, username, ... }:
 
 {
   programs.zsh = {
@@ -16,10 +16,11 @@
     shellAliases = {
       edit = "sudo -E nvim -n";
       gitavail = "ssh-add $HOME/Documents/Важное/recovery_keys/GitHub/github_remote_keys/key";
-      update = "sudo nixos-rebuild switch";
+      # Flake rebuild: picks the nixosConfiguration matching the current hostname.
+      update = "sudo nixos-rebuild switch --flake /etc/nixos";
       stop = "shutdown now";
       edconf = "sudo -E nvim /etc/nixos/configuration.nix";
-      out = "loginctl terminate-user ilyamiro";  
+      out = "loginctl terminate-user ${username}";
     };
     
     

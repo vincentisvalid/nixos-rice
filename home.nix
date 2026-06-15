@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, username, ... }:
 
 let
   # 1. Define the path to your programs directory
@@ -21,9 +21,9 @@ in
     ./config/sessions/hyprland/default.nix
   ] ++ programImports; 
 
-  home.username = "ilyamiro";
-  home.homeDirectory = "/home/ilyamiro";
-  home.stateVersion = "25.11"; 
+  home.username = username;
+  home.homeDirectory = "/home/${username}";
+  home.stateVersion = "25.11";
   
   home.packages = with pkgs; [
       adwaita-icon-theme
@@ -72,9 +72,9 @@ in
   gtk = {
     enable = true;
     
-    # IMPORT DYNAMIC MATUGEN COLORS 
-    gtk3.extraCss = ''@import url("file:///home/ilyamiro/.cache/matugen/colors-gtk.css");'';
-    gtk4.extraCss = ''@import url("file:///home/ilyamiro/.cache/matugen/colors-gtk.css");'';
+    # IMPORT DYNAMIC MATUGEN COLORS
+    gtk3.extraCss = ''@import url("file://${config.home.homeDirectory}/.cache/matugen/colors-gtk.css");'';
+    gtk4.extraCss = ''@import url("file://${config.home.homeDirectory}/.cache/matugen/colors-gtk.css");'';
     
     # Target GTK3 specifically
     gtk3.extraConfig = {

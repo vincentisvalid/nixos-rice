@@ -1,27 +1,87 @@
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/ilyamiro)
+# nixos-rice
 
-# Big announcement to all of my users! 
-### Starting from 12.05.2026, the version of my dots will remain available for arch on version v1.7.6, since I am working on a very big update - v2.0.0. It will shift the whole paradigm - instead of being invasive into your configs, the shell will actually be a "shell" and be just a quickshell configuration on top of your compositor - that will extend the support onto Niri, MangoWM, and other wayland compositors other than Hyprland. The new update will also make everything much more optimized and efficient and will be out in a span of a month. Thank you!
-
-
-## Do NOT install it on NixOS. This config has a lot adapting to do, until I introduce flakes.
-## Arch installer now available for everyone. Just run this: 
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/ilyamiro/imperative-dots/master/install.sh)"
-```
-
-> [!WARNING]
-> DO NOT LAUNCH THIS AS ROOT!
-
-> [!NOTE]
-> This installer sends anonymous non-identifying telemetry that helps me debug problems and track the amount of users
-
-### You can find all of my wallpapers **[HERE](https://github.com/ilyamiro/shell-wallpapers)**.
-
-## Previews of my desktop
+A **NixOS + flakes** adaptation of [**ilyamiro**'s desktop rice](https://github.com/ilyamiro/nixos-configuration),
+with a guided TUI installer for a clean install from the NixOS minimal ISO.
 
 ---
+
+## ⚠️ Credits & honesty
+
+- **All of the actual rice** — the Hyprland setup, the Quickshell shell, the matugen
+  theming, the scripts, the look and feel — is the work of **[ilyamiro](https://github.com/ilyamiro)**.
+  Original config: <https://github.com/ilyamiro/nixos-configuration>.
+- **Wallpapers** are ilyamiro's too: <https://github.com/ilyamiro/shell-wallpapers>.
+  Please ⭐ and support the original author (he has a [ko-fi](https://ko-fi.com/ilyamiro)).
+- **This repository's contribution** is limited to: converting the config to **flakes**,
+  parameterizing the username/host/GPU so it isn't hard-wired to one machine, splitting GPU
+  drivers into modules, and writing the **Ink TUI installer**.
+- 🤖 **This NixOS/flakes adaptation and the installer were written with AI (Claude).**
+  Read the code before running it — especially the installer, which **erases a disk**.
+
+---
+
+## What this gives you
+
+- Hyprland + Quickshell rice (ilyamiro's), via **home-manager**
+- A pinned **flake** (`nixpkgs` unstable + `home-manager`)
+- **GRUB** (UEFI), **PipeWire** audio, GPU drivers (NVIDIA open / NVIDIA proprietary / AMD / Intel)
+- An installer that partitions an NVMe/SATA disk and installs the whole thing
+
+## Install (clean install from NixOS minimal ISO)
+
+1. Boot the **NixOS minimal ISO** in **UEFI** mode.
+2. Get online (e.g. `nmtui` for Wi‑Fi, or plug in Ethernet).
+3. Run the installer as root:
+
+   ```bash
+   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/vincentisvalid/nixos-rice/master/installer/install.sh)"
+   ```
+
+The TUI will ask for the target disk (with a typed confirmation, since it gets **erased**),
+your username/hostname/password, timezone/locale, **GPU vendor**, and swap size. It then
+partitions, clones this repo to `/mnt/etc/nixos`, generates a per-machine
+`hardware-configuration.nix`, downloads the wallpapers, runs `nixos-install`, sets your
+password, and offers to reboot. On failure it shows the failing step, the captured stderr,
+and the path to the full log (`/tmp/nixos-rice-install.log`).
+
+> The disk you pick is **completely wiped**. Back up first.
+
+## Layout
+
+```
+flake.nix                 # inputs (nixpkgs, home-manager) + nixosConfiguration
+host.nix                  # per-machine: username/hostname/gpu/timezone/locale (installer writes this)
+configuration.nix         # system config (parameterized)
+home.nix                  # home-manager entry (imports config/programs/*)
+hardware-configuration.nix# placeholder — regenerated per machine by the installer
+modules/gpu/*.nix         # nvidia-open / nvidia / amd / intel
+config/                   # ilyamiro's rice (programs + hyprland session)
+installer/                # Ink TUI installer + bootstrap install.sh
+```
+
+## After install / day-to-day
+
+The config lives at `/etc/nixos` (a git checkout). Rebuild with:
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos     # alias: `update`
+```
+
+Edit machine settings in `/etc/nixos/host.nix` (username/hostname/GPU/timezone/locale).
+To change the GPU driver, set `gpu` to one of `nvidia-open` / `nvidia` / `amd` / `intel`
+(matching a file in `modules/gpu/`) and rebuild.
+
+## Notes & known rough edges
+
+- `nix` was not available where this was adapted, so the flake was **not build-tested**
+  before publishing. Run `nix flake check` / `nixos-rebuild build --flake .#<host>` and expect
+  to iterate on the package list the first time.
+- A few packages from the original config were flagged in `configuration.nix`:
+  `python314` (not packaged — `python311` is used) and `jdk8` (marked insecure — commented out).
+- NVIDIA open module assumes Turing+ (RTX 20xx–40xx). If a bleeding-edge kernel breaks the
+  driver build, switch `nvidiaPackages.stable` → `production` in `modules/gpu/nvidia-open.nix`.
+
+## Previews (ilyamiro's desktop)
 
 ![preview1](previews/screenshot1.png)
 ![preview2](previews/screenshot2.png)
@@ -33,4 +93,3 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/ilyamiro/imperative-dots
 ![preview8](previews/screenshot8.png)
 ![preview9](previews/screenshot9.png)
 ![preview10](previews/screenshot10.png)
-

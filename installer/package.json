@@ -1,0 +1,21 @@
+{
+  "name": "nixos-rice-installer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ink TUI installer for the nixos-rice configuration",
+  "bin": {
+    "nixos-rice-installer": "cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "check": "node --check cli.js"
+  },
+  "dependencies": {
+    "ink": "^5.1.0",
+    "react": "^18.3.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
