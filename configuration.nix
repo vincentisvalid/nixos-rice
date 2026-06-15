@@ -56,7 +56,7 @@
     p7zip
     papers
     fastfetch
-    jetbrains.idea-community
+    jetbrains.idea-oss   # was jetbrains.idea-community (discontinued by JetBrains)
     quickshell
     gnome-shell-extensions
     # OBS Studio with the Composite Blur plugin bundled in.

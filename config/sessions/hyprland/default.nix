@@ -21,7 +21,7 @@
     fortune
     wl-screenrec
     alsa-utils
-    swww
+    awww
     networkmanager_dmenu
     wl-clipboard
     fd
