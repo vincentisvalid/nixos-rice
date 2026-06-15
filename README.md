@@ -50,7 +50,24 @@ built from source via flake inputs (`flake.lock` pins them — no manual hashes)
 
 1. Boot the **NixOS minimal ISO** in **UEFI** mode.
 2. Get online (e.g. `nmtui` for Wi‑Fi, or plug in Ethernet).
-3. Run the installer as root:
+3. **(Recommended) Validate the flake first — non-destructive.** The installer wipes
+   the disk *before* it builds, so catch any eval error while the disk is still intact:
+
+   ```bash
+   nix eval --extra-experimental-features 'nix-command flakes' \
+     github:vincentisvalid/nixos-rice#nixosConfigurations.nixos.config.system.build.toplevel.drvPath
+   ```
+
+   - Prints a `/nix/store/….drv` path → the base config **evaluates cleanly**; proceed.
+   - Throws an error → fix it (or open an issue) **before** wiping anything.
+
+   This validates the base system (packages, options, GPU module, Firefox gating). The
+   optional from-source/CUDA apps (`starpsx`, `boo`, GPU Ollama) are only built later by
+   `nixos-install` if you tick them. For a heavier full check, use
+   `nixos-rebuild build --flake .#nixos` instead (builds the NVIDIA driver etc. into the
+   live ISO's RAM-backed store, so it can run low on space).
+
+4. Run the installer as root:
 
    ```bash
    sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/vincentisvalid/nixos-rice/master/installer/install.sh)"
