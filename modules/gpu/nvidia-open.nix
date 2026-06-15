@@ -18,8 +18,12 @@
 
     nvidiaSettings = true;
 
-    # If you hit a build/regression on the latest kernel, switch this to
-    # `nvidiaPackages.production` and rebuild.
+    # Branch choice for an RTX 4090 (Ada) on linuxPackages_latest:
+    #   stable     -> recent + well-tested; builds against the newest kernel  ✅ best here
+    #   beta       -> newest features, slightly less tested
+    #   production -> most conservative, but OFTEN LAGS kernel support and fails
+    #                 to build on linuxPackages_latest. Avoid with the latest kernel.
+    # 4090 is fully supported on all branches, so we pick stable for reliability.
     package = config.boot.kernelPackages.nvidiaPackages.stable;
 
     # Desktop: keep the GPU powered. Fine-grained power management is for
