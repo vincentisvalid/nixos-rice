@@ -136,11 +136,9 @@
   # Desktop environment, window managers and theme
   services.xserver.enable = true;
 
-  # Login manager: SDDM (Wayland). Replaces GDM — fits the Hyprland/Qt rice better.
-  services.displayManager.sddm = {
-    enable = true;
-    wayland.enable = true;
-  };
+  # Login manager: ly (lightweight TUI greeter). Pick the session (Hyprland /
+  # GNOME) from its menu at login.
+  services.displayManager.ly.enable = true;
   # GNOME desktop is still installed (the rice relies on nautilus, gsettings,
   # gnome-tweaks, etc.); only the display manager changed.
   services.desktopManager.gnome.enable = true;
