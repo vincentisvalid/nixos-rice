@@ -7,6 +7,9 @@
 
   wayland.windowManager.hyprland = {
     enable = true;
+    # The rice is written in hyprlang (the `source = ...` includes below), so
+    # pin configType — nixpkgs is changing the default to "lua".
+    configType = "hyprlang";
     extraConfig = ''
       source = /etc/nixos/config/sessions/hyprland/hyprland.conf
     '';

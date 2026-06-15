@@ -28,6 +28,7 @@
     clock-rs
     cbonsai
     git
+    android-tools
     killall
     btop  
     mpv
@@ -92,7 +93,7 @@
   users.users.${username} = {
     isNormalUser = true;
     description = username;
-    extraGroups = [ "networkmanager" "wheel" "video" "adbusers" "libvirtd"];
+    extraGroups = [ "networkmanager" "wheel" "video" "libvirtd"];
     packages = with pkgs; [
     #  thunderbird
     ];
@@ -121,7 +122,8 @@
   # Program configurations
   programs.zsh.enable = true;
 
-  programs.adb.enable = true;
+  # adb/fastboot: `programs.adb` was removed (systemd 258 handles the uaccess
+  # udev rules automatically). The binaries come from android-tools below.
 
   # Install firefox (unless chromium was chosen in the installer).
   programs.firefox.enable = (host.browser or "firefox") == "firefox";
