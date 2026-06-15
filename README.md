@@ -24,8 +24,27 @@ with a guided TUI installer for a clean install from the NixOS minimal ISO.
 
 - Hyprland + Quickshell rice (ilyamiro's), via **home-manager**
 - A pinned **flake** (`nixpkgs` unstable + `home-manager`)
-- **GRUB** (UEFI), **PipeWire** audio, GPU drivers (NVIDIA open / NVIDIA proprietary / AMD / Intel)
+- **GRUB** (UEFI), **PipeWire** audio, **ly** login manager, GPU drivers (NVIDIA open / NVIDIA proprietary / AMD / Intel)
+- OBS Studio bundled with the **Composite Blur** plugin
 - An installer that partitions an NVMe/SATA disk and installs the whole thing
+- A grouped **optional-apps checklist** in the installer (see below)
+
+### Optional applications (installer checklist)
+
+The installer shows a grouped, multi-select checklist (with a "Select all" box).
+Selections are written to a generated `apps.nix`:
+
+- **AI / Dev:** opencode, claude-code, codex, antigravity, **ollama** (GPU-accelerated — CUDA on NVIDIA, ROCm on AMD)
+- **Gaming & Emulation:** Steam, PrismLauncher, PCSX2, RPCS3, **starpsx** (PS1, built from source)
+- **Privacy & Security:** Mullvad VPN, Tor (daemon), Tor Browser, Monero GUI/CLI, CoyIM, Cinny (Matrix)
+- **Communication:** Vesktop, Thunderbird
+- **Utilities:** LocalSend, **QEMU + virt-manager** (with a working NAT network), **boo** (ghostty multiplexer, built from source)
+- **Browser:** Chromium (choosing it removes Firefox)
+- **Terminal:** Ghostty (becomes the default terminal — `Super+Return`)
+
+You're also asked for a **default file manager**: Nautilus (stock) or **Yazi + udiskie**
+auto-mount (rebinds `Super+E`). `starpsx` and `boo` aren't in nixpkgs, so they're
+built from source via flake inputs (`flake.lock` pins them — no manual hashes).
 
 ## Install (clean install from NixOS minimal ISO)
 

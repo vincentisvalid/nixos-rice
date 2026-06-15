@@ -9,4 +9,7 @@
   gpu       = "nvidia-open";
   timezone  = "Europe/Copenhagen";
   locale    = "en_US.UTF-8";
+  # "firefox" (default) or "chromium". Choosing chromium in the installer sets
+  # this to "chromium", which disables/uninstalls Firefox.
+  browser   = "firefox";
 }

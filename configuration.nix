@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, lib, username, host, ... }:
+{ config, pkgs, lib, username, host, inputs, ... }:
 
 {
   # Imports
@@ -11,6 +11,8 @@
       ./hardware-configuration.nix
       # GPU drivers, selected via host.nix (nvidia-open / nvidia / amd / intel).
       (./modules/gpu + "/${host.gpu}.nix")
+      # Optional applications chosen in the installer (generated; empty by default).
+      ./apps.nix
     ];
   # NOTE: home-manager is wired up as a flake module in flake.nix, not here.
 
@@ -42,7 +44,6 @@
     # NOTE: `python314` from the original config is not packaged in nixpkgs as of
     # this writing. python311 above covers the rice's scripts; re-add a specific
     # interpreter here (e.g. python312) if you need a newer one.
-    (wrapFirefox (pkgs.firefox-unwrapped.override { pipewireSupport = true; }) {})
     telegram-desktop
     pkgs.onlyoffice-desktopeditors
     kitty
@@ -51,13 +52,14 @@
     hunspellDicts.ru_RU
     hunspellDicts.en_US
     obsidian
-    obs-studio
     p7zip
     papers
     fastfetch
     jetbrains.idea-community
     quickshell
     gnome-shell-extensions
+    # OBS Studio with the Composite Blur plugin bundled in.
+    (wrapOBS { plugins = with obs-studio-plugins; [ obs-composite-blur ]; })
     grim
     playerctl
     satty
@@ -78,7 +80,11 @@
     #   nixpkgs.config.permittedInsecurePackages = [ "openjdk-8...." ];
     # jdk8
     steam-run
-  ];
+  ]
+  # Firefox (with PipeWire screen-sharing). Installed unless chromium was chosen
+  # in the installer (host.browser = "chromium"), which "uninstalls" Firefox.
+  ++ lib.optional ((host.browser or "firefox") == "firefox")
+    (pkgs.wrapFirefox (pkgs.firefox-unwrapped.override { pipewireSupport = true; }) {});
 
   environment.pathsToLink = [ "/share/gsettings-schemas" ];
 
@@ -117,18 +123,15 @@
 
   programs.adb.enable = true;
 
-  # Install firefox.
-  programs.firefox.enable = true;
+  # Install firefox (unless chromium was chosen in the installer).
+  programs.firefox.enable = (host.browser or "firefox") == "firefox";
 
   programs.dconf = {
     enable = true;
   };
 
-  programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true; 
-    dedicatedServer.openFirewall = true; 
-  };
+  # Steam is an optional app (enabled via apps.nix / the installer checklist,
+  # default-checked) so it can actually be opted out of. gamemode stays on.
   programs.gamemode.enable = true;
 
   # Home manager is configured in flake.nix (home-manager.users.${username}).

@@ -11,11 +11,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 
 import Select from './Select.js';
+import MultiSelect from './MultiSelect.js';
 import TextInput from './TextInput.js';
 import Spinner from './Spinner.js';
 import { listDisks } from '../lib/disk.js';
 import { buildSteps } from '../lib/steps.js';
 import { sh, LOG_PATH } from '../lib/sh.js';
+import { GROUPS, ALL_IDS, DEFAULT_IDS } from '../lib/catalog.js';
 
 const e = React.createElement;
 
@@ -44,10 +46,14 @@ function IdentityForm({ initial, onDone }) {
       validate: (v) => (/^[a-z_][a-z0-9_-]*$/.test(v) ? null : 'lowercase letters/digits/_/-, must start with a letter or _') },
     { key: 'hostname', label: 'Hostname', placeholder: 'e.g. nixos',
       validate: (v) => (/^[a-zA-Z0-9-]+$/.test(v) ? null : 'letters, digits and - only') },
-    { key: 'password', label: 'Password', mask: '*',
+    { key: 'password', label: 'User password', mask: '*',
       validate: (v) => (v.length >= 1 ? null : 'cannot be empty') },
-    { key: 'passwordConfirm', label: 'Confirm password', mask: '*',
+    { key: 'passwordConfirm', label: 'Confirm user pw', mask: '*',
       validate: (v, vals) => (v === vals.password ? null : 'passwords do not match') },
+    { key: 'rootPassword', label: 'Root password', mask: '*',
+      validate: (v) => (v.length >= 1 ? null : 'cannot be empty') },
+    { key: 'rootPasswordConfirm', label: 'Confirm root pw', mask: '*',
+      validate: (v, vals) => (v === vals.rootPassword ? null : 'passwords do not match') },
     { key: 'timezone', label: 'Timezone', placeholder: 'Region/City',
       validate: (v) => (/^[A-Za-z]+\/[A-Za-z_]+/.test(v) ? null : 'e.g. Europe/Copenhagen') },
     { key: 'locale', label: 'Locale',
@@ -56,6 +62,7 @@ function IdentityForm({ initial, onDone }) {
 
   const [values, setValues] = useState({
     username: '', hostname: 'nixos', password: '', passwordConfirm: '',
+    rootPassword: '', rootPasswordConfirm: '',
     timezone: 'Europe/Copenhagen', locale: 'en_US.UTF-8', ...initial,
   });
   const [idx, setIdx] = useState(0);
@@ -108,11 +115,14 @@ export default function App() {
   const [disks, setDisks] = useState(null);
   const [cfg, setCfg] = useState({
     disk: '', swapGiB: 0, username: '', hostname: 'nixos',
-    password: '', gpu: 'nvidia-open', timezone: 'Europe/Copenhagen',
-    locale: 'en_US.UTF-8', repoUrl: REPO_URL, wallpapersUrl: WALLPAPERS_URL,
+    password: '', rootPassword: '', gpu: 'nvidia-open',
+    timezone: 'Europe/Copenhagen', locale: 'en_US.UTF-8',
+    apps: [], fileManager: 'nautilus',
+    repoUrl: REPO_URL, wallpapersUrl: WALLPAPERS_URL,
   });
   const [confirmText, setConfirmText] = useState('');
   const [swapText, setSwapText] = useState('0');
+  const [selectedApps, setSelectedApps] = useState(new Set(DEFAULT_IDS));
 
   // run-screen state
   const [stepList, setStepList] = useState([]);
@@ -229,7 +239,7 @@ export default function App() {
       e(IdentityForm, {
         initial: { hostname: cfg.hostname, timezone: cfg.timezone, locale: cfg.locale },
         onDone: (vals) => {
-          setCfg({ ...cfg, username: vals.username, hostname: vals.hostname, password: vals.password, timezone: vals.timezone, locale: vals.locale });
+          setCfg({ ...cfg, username: vals.username, hostname: vals.hostname, password: vals.password, rootPassword: vals.rootPassword, timezone: vals.timezone, locale: vals.locale });
           setScreen('gpu');
         },
       })
@@ -287,10 +297,54 @@ export default function App() {
         e(TextInput, {
           value: swapText,
           onChange: setSwapText,
-          onSubmit: () => { if (valid) { setCfg({ ...cfg, swapGiB: n }); setScreen('summary'); } },
+          onSubmit: () => { if (valid) { setCfg({ ...cfg, swapGiB: n }); setScreen('apps'); } },
         })
       ),
       !valid ? e(Text, { color: 'yellow' }, '  enter a whole number ≥ 0') : null
+    );
+  }
+
+  if (screen === 'apps') {
+    return e(
+      Box, { flexDirection: 'column', padding: 1 },
+      e(Title),
+      e(Text, { bold: true }, 'Optional applications:'),
+      e(Box, { marginTop: 1 },
+        e(MultiSelect, {
+          groups: GROUPS,
+          selected: selectedApps,
+          allSelected: selectedApps.size === ALL_IDS.length,
+          onToggle: (id) => setSelectedApps((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+          }),
+          onToggleAll: () => setSelectedApps((prev) =>
+            prev.size === ALL_IDS.length ? new Set() : new Set(ALL_IDS)),
+          onSubmit: () => {
+            setCfg({ ...cfg, apps: [...selectedApps] });
+            setScreen('filemanager');
+          },
+        })
+      )
+    );
+  }
+
+  if (screen === 'filemanager') {
+    return e(
+      Box, { flexDirection: 'column', padding: 1 },
+      e(Title),
+      e(Text, { bold: true }, 'Default file manager:'),
+      e(Text, { color: 'gray' }, 'Bound to Super+E in the rice.'),
+      e(Box, { marginTop: 1 },
+        e(Select, {
+          items: [
+            { label: 'Nautilus (GNOME, graphical) — stock default', value: 'nautilus' },
+            { label: 'Yazi (terminal) + udiskie auto-mount for external drives', value: 'yazi' },
+          ],
+          onSelect: (it) => { setCfg({ ...cfg, fileManager: it.value }); setScreen('summary'); },
+        })
+      )
     );
   }
 
@@ -308,6 +362,10 @@ export default function App() {
         row('Swap', cfg.swapGiB > 0 ? cfg.swapGiB + ' GiB' : 'none'),
         row('Timezone', cfg.timezone),
         row('Locale', cfg.locale),
+        row('Terminal', cfg.apps.includes('ghostty') ? 'ghostty' : 'kitty'),
+        row('Browser', cfg.apps.includes('chromium') ? 'chromium (Firefox removed)' : 'firefox'),
+        row('File mgr', cfg.fileManager),
+        row('Apps', cfg.apps.length ? `${cfg.apps.length} selected` : 'none'),
         row('Config', cfg.repoUrl)
       ),
       e(Select, {
