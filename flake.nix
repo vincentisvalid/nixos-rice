@@ -2,13 +2,16 @@
   description = "ilyamiro's rice, adapted to NixOS with flakes (see README for credits)";
 
   inputs = {
-    # Tracks nixos-unstable: the config uses linuxPackages_latest, quickshell,
-    # matugen, and a 25.11 stateVersion, so a rolling channel is the right fit.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Pinned to the 25.11 stable release. nixos-unstable + home-manager master
+    # drift independently and periodically break each other (and unstable can
+    # carry transient build failures); the release branches are curated to be
+    # internally coherent. quickshell, matugen and linuxPackages_latest are all
+    # available in 25.11.
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
     home-manager = {
-      url = "github:nix-community/home-manager";
-      # Keep home-manager's nixpkgs aligned with ours to avoid version skew.
+      # Must match the nixpkgs release branch above to avoid version skew.
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

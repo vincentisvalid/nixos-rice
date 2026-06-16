@@ -46,10 +46,13 @@ export function appsNixContents(cfg) {
     if (a.imports) imports.push(...a.imports);
   }
 
-  // ollama: GPU acceleration follows the chosen GPU vendor.
+  // ollama: pick the pre-built package variant for the chosen GPU vendor.
+  // services.ollama.acceleration was removed; the package attribute is the replacement.
   if (cfg.apps.includes('ollama')) {
-    const accel = cfg.gpu.startsWith('nvidia') ? '"cuda"' : cfg.gpu === 'amd' ? '"rocm"' : 'false';
-    modules.push(`services.ollama = {\n    enable = true;\n    acceleration = ${accel};\n  };`);
+    const pkg = cfg.gpu.startsWith('nvidia') ? 'pkgs.ollama-cuda'
+              : cfg.gpu === 'amd'            ? 'pkgs.ollama-rocm'
+              :                                'pkgs.ollama';
+    modules.push(`services.ollama = {\n    enable = true;\n    package = ${pkg};\n  };`);
   }
 
   // yazi as default file manager: install it + udiskie automount + udisks2.

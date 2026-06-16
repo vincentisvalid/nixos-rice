@@ -23,7 +23,6 @@ in
 {
   virtualisation.libvirtd = {
     enable = true;
-    qemu.ovmf.enable = true;   # UEFI guests
     qemu.swtpm.enable = true;  # emulated TPM (Windows 11 guests)
   };
   programs.virt-manager.enable = true;
