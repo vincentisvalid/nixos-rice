@@ -81,11 +81,16 @@
     #   nixpkgs.config.permittedInsecurePackages = [ "openjdk-8...." ];
     # jdk8
     steam-run
-  ]
-  # Firefox (with PipeWire screen-sharing). Installed unless chromium was chosen
-  # in the installer (host.browser = "chromium"), which "uninstalls" Firefox.
-  ++ lib.optional ((host.browser or "firefox") == "firefox")
-    (pkgs.wrapFirefox (pkgs.firefox-unwrapped.override { pipewireSupport = true; }) {});
+  ];
+  # Firefox is installed by the `programs.firefox` module below (gated on
+  # host.browser), NOT here. Adding it to environment.systemPackages as well
+  # would put two different firefox derivations in the system profile, and the
+  # buildEnv would fail at *build/install* time with a collision on
+  # /bin/firefox — which `nix eval` cannot detect (it only checks evaluation,
+  # not realisation). PipeWire screen-sharing works at runtime through the
+  # xdg-desktop-portal setup below + Wayland (NIXOS_OZONE_WL), so the old
+  # `firefox-unwrapped.override { pipewireSupport = true; }` wrapper (which no
+  # longer takes that argument) isn't needed.
 
   environment.pathsToLink = [ "/share/gsettings-schemas" ];
 
