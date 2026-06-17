@@ -14,15 +14,6 @@
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # Optional apps that aren't in nixpkgs (only built if selected in apps.nix):
-    # boo ships its own flake; starpsx is a Rust source tree (flake=false), built
-    # via cargoLock so no manual hashes are needed (flake.lock pins the source).
-    boo.url = "github:coder/boo";
-    starpsx = {
-      url = "github:kaezrr/starpsx";
-      flake = false;
-    };
   };
 
   outputs = inputs@{ self, nixpkgs, home-manager, ... }:
@@ -38,7 +29,8 @@
         inherit system;
 
         # Made available to configuration.nix (and apps.nix) as function args.
-        # `inputs` lets apps.nix reach the boo/starpsx flake inputs.
+        # `inputs` is still passed through so apps.nix can reference flake inputs
+        # if you add any by hand later.
         specialArgs = { inherit username hostname host inputs; };
 
         modules = [

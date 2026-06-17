@@ -71,7 +71,9 @@
     slurp
     mpvpaper
     gnome-tweaks
-    pkgsCross.mingwW64.stdenv.cc
+    # Removed: pkgsCross.mingwW64.stdenv.cc — a Windows cross-compiler GCC that
+    # isn't reliably in the binary cache and can build from source during install.
+    # Re-add if you actually cross-compile for Windows.
     wmctrl
     bottles
     qbittorrent
@@ -98,7 +100,7 @@
   users.users.${username} = {
     isNormalUser = true;
     description = username;
-    extraGroups = [ "networkmanager" "wheel" "video" "libvirtd"];
+    extraGroups = [ "networkmanager" "wheel" "video" ];
     packages = with pkgs; [
     #  thunderbird
     ];
@@ -288,10 +290,7 @@
     ];
     
   };
-  # Virtualization
-  virtualisation.libvirtd.enable = true;
-  programs.virt-manager.enable = true;
-	
+
   # Bootloader and kernel — GRUB in UEFI mode.
   boot.loader.grub = {
     enable = true;

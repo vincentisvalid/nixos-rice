@@ -30,8 +30,6 @@ export const GROUPS = [
       { id: 'prismlauncher', label: 'PrismLauncher (Minecraft)', pkgs: ['prismlauncher'] },
       { id: 'pcsx2', label: 'PCSX2 (PS2)', pkgs: ['pcsx2'] },
       { id: 'rpcs3', label: 'RPCS3 (PS3)', pkgs: ['rpcs3'] },
-      { id: 'starpsx', label: 'starpsx (PS1, built from source)',
-        raw: ['(callPackage ./modules/pkgs/starpsx.nix { inherit (inputs) starpsx; })'] },
     ],
   },
   {
@@ -60,10 +58,6 @@ export const GROUPS = [
     apps: [
       { id: 'localsend', label: 'LocalSend (file sharing)', pkgs: ['localsend'],
         modules: ['networking.firewall.allowedTCPPorts = [ 53317 ];\n  networking.firewall.allowedUDPPorts = [ 53317 ];'] },
-      { id: 'qemu', label: 'QEMU + virt-manager (with NAT networking)',
-        imports: ['./modules/virtualisation.nix'] },
-      { id: 'boo', label: 'boo (ghostty multiplexer, built from source)',
-        raw: ['inputs.boo.packages.${pkgs.system}.default'] },
     ],
   },
   {
